@@ -7,8 +7,6 @@ const int RED = 0;
 const int GREEN = 1;
 const int BLUE = 2;
 
-int newcolors[] = {0, 0, 0};
-
 // -------------------- zpm's pwm implementation --------------------- //
 
 // minimum value to do something without flicker seems to be 200 us
@@ -44,7 +42,7 @@ void writeRGB() {
 
 // -------------------- zpm's fader implementation --------------------- //
 
-static long transTime = 5000000;
+static long transTime = 1000000;
 static long transSteps = 100;
 static long transTimePerStep = transTime / transSteps;
 
@@ -63,7 +61,7 @@ void transitionRGB() {
       // go to next step
       for (int i = 0; i <= 2; i++) {
         atRGB[i] = toRGB[i];
-        toRGB[i] = newcolors[i]; //random(0, 1000);
+        toRGB[i] = random(0, 1000);
         // Serial.print("\n");
       }
       stepNo = 0;
@@ -106,93 +104,9 @@ void setup() {
   setBrightness(GREEN, 0);
 }
 
-char ir[15];
-char ig[15];
-char ib[15];
-
-#define bufferMax 128
-int bufferSize;
-char buffer[bufferMax];
-
 void loop() {
   currentMicros = micros();
-  // transitionRGB();
-
-  EthernetClient client = server.available();
-  if (client) {
-    waitForRequest(client);
-    parseRequest();
-    
-    client.println("HTTP/1.1 200 OK");
-    client.println("Content-Type: text/html");
-    client.println("Connnection: close");
-    client.println();
-    
-    // give the web browser time to receive the data
-    delay(1);
-    // close the connection:
-    client.stop();
-    
-    newcolors[RED] = atoi(ir);
-    newcolors[GREEN] = atoi(ig);    
-    newcolors[BLUE] = atoi(ib);
-    
-    setBrightness(0, atoi(ir));
-    setBrightness(1, atoi(ig));
-    setBrightness(2, atoi(ib));
-    
-  }
-
+  transitionRGB();
   writeRGB();
-
 }
 
-void waitForRequest(EthernetClient client) {
-  bufferSize = 0;
-  
-  while (client.connected()) {
-    if (client.available()) {
-      char c = client.read();
-      if (c == '\n')
-        break;
-      else
-        if (bufferSize < bufferMax)
-          buffer[bufferSize++] = c;
-        else
-          break;
-    }
-  }
-  
-  Serial.print("BufferSize - ");
-  Serial.println(bufferSize);
-  Serial.println(buffer);
-}
-
-void parseRequest() {
-  //Received buffer contains "GET /cmd/param1/param2 HTTP/1.1".  Break it up.
-  char* slash1;
-  char* slash2;
-  char* slash3;
-  char* space2;
-  
-  slash1 = strstr(buffer, "/") + 1; // Look for first slash
-  slash2 = strstr(slash1, "/") + 1; // second slash
-  slash3 = strstr(slash2, "/") + 1; // third slash
-  space2 = strstr(slash2, " ") + 1; // space after second slash (in case there is no third slash)
-  if (slash3 > space2) slash3=slash2;
-  
-  // strncpy does not automatically add terminating zero, but strncat does! So start with blank string and concatenate.
-  ir[0] = 0;
-  ig[0] = 0;
-  ib[0] = 0;
-  strncat(ir, slash1, slash2-slash1-1);
-  strncat(ig, slash2, slash3-slash2-1);
-  strncat(ib, slash3, space2-slash3-1);
-  
-  Serial.print("Red value - ");
-  Serial.println(ir);
-  Serial.print("Green value - ");
-  Serial.println(ig);
-  Serial.print("Blue value - ");
-  Serial.println(ib);
-}

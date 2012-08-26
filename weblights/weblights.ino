@@ -1,98 +1,135 @@
-/*
-  Web Server
- 
- A simple web server that shows the value of the analog input pins.
- using an Arduino Wiznet Ethernet shield. 
- 
- Circuit:
- * Ethernet shield attached to pins 10, 11, 12, 13
- * Analog inputs attached to pins A0 through A5 (optional)
- 
- created 18 Dec 2009
- by David A. Mellis
- modified 9 Apr 2012
- by Tom Igoe
- 
- */
-
 #include <SPI.h>
 #include <Ethernet.h>
 
-// Enter a MAC address and IP address for your controller below.
-// The IP address will be dependent on your local network:
-byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
-IPAddress ip(192,168,1, 177);
-
-// Initialize the Ethernet server library
-// with the IP address and port you want to use 
-// (port 80 is default for HTTP):
 EthernetServer server(80);
+byte mac[] = { 0x90, 0xA2, 0xDA, 0x0D, 0x4B, 0x82 };
 
 void setup() {
- // Open serial communications and wait for port to open:
-  Serial.begin(9600);
-  while (!Serial) {;}
 
+  Serial.begin(9600);
 
   // start the Ethernet connection and the server:
-  Ethernet.begin(mac, ip);
+  Ethernet.begin(mac);
   server.begin();
   Serial.print("server is at ");
   Serial.println(Ethernet.localIP());
+
+  // startup setup
+  pinMode(3, OUTPUT);
+  pinMode(5, OUTPUT);
+  pinMode(6, OUTPUT);
+//  pinMode(9, OUTPUT);
+//  pinMode(10, OUTPUT);
+//  pinMode(11, OUTPUT);
+
+  analogWrite(3, 0);
+  analogWrite(5, 0);
+  analogWrite(6, 0);
+//  analogWrite(9, 0);
+//  analogWrite(10, 0);
+//  analogWrite(11, 0);
+
 }
 
+char ir[15];
+char ig[15];
+char ib[15];
+//char ir2[15];
+//char ig2[15];
+//char ib2[15];
+
+#define bufferMax 128
+int bufferSize;
+char buffer[bufferMax];
 
 void loop() {
-  // listen for incoming clients
   EthernetClient client = server.available();
   if (client) {
-    Serial.println("new client");
-    // an http request ends with a blank line
-    boolean currentLineIsBlank = true;
-    while (client.connected()) {
-      if (client.available()) {
-        char c = client.read();
-        Serial.write(c);
-        // if you've gotten to the end of the line (received a newline
-        // character) and the line is blank, the http request has ended,
-        // so you can send a reply
-        if (c == '\n' && currentLineIsBlank) {
-          // send a standard http response header
-          client.println("HTTP/1.1 200 OK");
-          client.println("Content-Type: text/html");
-          client.println("Connnection: close");
-          client.println();
-          client.println("<!DOCTYPE HTML>");
-          client.println("<html>");
-                    // add a meta refresh tag, so the browser pulls again every 5 seconds:
-          client.println("<meta http-equiv=\"refresh\" content=\"5\">");
-          // output the value of each analog input pin
-          for (int analogChannel = 0; analogChannel < 6; analogChannel++) {
-            int sensorReading = analogRead(analogChannel);
-            client.print("analog input ");
-            client.print(analogChannel);
-            client.print(" is ");
-            client.print(sensorReading);
-            client.println("<br />");       
-          }
-          client.println("</html>");
-          break;
-        }
-        if (c == '\n') {
-          // you're starting a new line
-          currentLineIsBlank = true;
-        } 
-        else if (c != '\r') {
-          // you've gotten a character on the current line
-          currentLineIsBlank = false;
-        }
-      }
-    }
+    waitForRequest(client);
+    parseRequest();
+    
+    client.println("HTTP/1.1 200 OK");
+    client.println("Content-Type: text/html");
+    client.println("Connnection: close");
+    client.println();
+    
     // give the web browser time to receive the data
     delay(1);
     // close the connection:
     client.stop();
-    Serial.println("client disonnected");
+    
+    analogWrite(3, atoi(ir));
+    analogWrite(5, atoi(ig));
+    analogWrite(6, atoi(ib));
+//    analogWrite(9, atoi(ir2));
+//    analogWrite(10, atoi(ig2));
+//    analogWrite(11, atoi(ib2));
+
+    Serial.print(atoi(ir));
+    Serial.print("\t");
+    Serial.print(atoi(ig));
+    Serial.print("\t");
+    Serial.print(atoi(ib));
+//    Serial.print("\t");
+//    Serial.print(atoi(ir2));
+//    Serial.print("\t");
+//    Serial.print(atoi(ig2));
+//    Serial.print("\t");
+//    Serial.print(atoi(ib2));  
+//    Serial.print("\n");
   }
 }
 
+void waitForRequest(EthernetClient client) {
+  bufferSize = 0;
+  while (client.connected()) {
+    if (client.available()) {
+      char c = client.read();
+      if (c == '\n')
+        break;
+      else
+        if (bufferSize < bufferMax)
+          buffer[bufferSize++] = c;
+        else
+          break;
+    }
+  }
+}
+
+void parseRequest() {
+  //Received buffer contains "GET /cmd/param1/param2 HTTP/1.1".  Break it up.
+  char* slash1;
+  char* slash2;
+  char* slash3;
+//  char* slash4;
+//  char* slash5;
+//  char* slash6;
+  char* space2;
+  
+  slash1 = strstr(buffer, "/") + 1; // Look for first slash
+  slash2 = strstr(slash1, "/") + 1; // second slash
+  slash3 = strstr(slash2, "/") + 1; // third slash
+  space2 = strstr(slash3, "/") + 1; // Look for first slash
+//  slash4 = strstr(slash3, "/") + 1; // Look for first slash
+//  slash5 = strstr(slash4, "/") + 1; // second slash
+//  slash6 = strstr(slash5, "/") + 1; // third slash
+//  space2 = strstr(slash6, " ") + 1; // space after second slash (in case there is no third slash)
+//  if (slash6 > space2) slash6=slash2;
+  if (slash3 > space2) slash3=slash2;
+  
+  // strncpy does not automatically add terminating zero, but strncat does! So start with blank string and concatenate.
+  ir[0] = 0;
+  ig[0] = 0;
+  ib[0] = 0;
+//  ir2[0] = 0;
+//  ig2[0] = 0;
+//  ib2[0] = 0;
+  strncat(ir, slash1, slash2-slash1-1);
+  strncat(ig, slash2, slash3-slash2-1);
+  strncat(ib, slash3, space2-slash3-1);
+//  strncat(ib, slash3, slash4-slash3-1);
+//  strncat(ir2, slash4, slash5-slash4-1);
+//  strncat(ig2, slash5, slash6-slash5-1);
+//  strncat(ib2, slash6, space2-slash6-1);
+
+}
