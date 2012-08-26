@@ -39,8 +39,9 @@ void writeRGB() {
 
 // -------------------- zpm's fader implementation --------------------- //
 
-static int transSteps = 100;
-static long transTimePerStep = 500000;
+static long transTime = 5000000;
+static long transSteps = 100;
+static long transTimePerStep = transTime / transSteps;
 
 long atRGB[] = {0, 0, 0};
 long toRGB[] = {random(0, 1000), random(0, 1000), random(0, 1000)};
@@ -58,20 +59,20 @@ void transitionRGB() {
       for (int i = 0; i <= 2; i++) {
         atRGB[i] = toRGB[i];
         toRGB[i] = random(0, 1000);
-        Serial.print("\n");
+        // Serial.print("\n");
       }
       stepNo = 0;
     }
-    Serial.print(stepNo);
-    Serial.print("\t");
+    // Serial.print(stepNo);
+    // Serial.print("\t");
     // set lights
     for (int i = 0; i <= 2; i++) {
       long newval = atRGB[i] + ((toRGB[i] - atRGB[i]) * stepNo) / transSteps;
       setBrightness(i, newval);
-      Serial.print(newval);
-      Serial.print("\t");
+      // Serial.print(newval);
+      // Serial.print("\t");
     }
-    Serial.println();
+    // Serial.println();
 
   }
 }
@@ -83,12 +84,10 @@ void setup() {
   pinMode(2, OUTPUT);
   pinMode(3, OUTPUT);
   pinMode(4, OUTPUT);
-  // initialize serial port:
-  Serial.begin(9600);
-  // initial set
-  setBrightness(RED, 0);
-  setBrightness(BLUE, 0);
-  setBrightness(GREEN, 0);
+  // Serial.begin(9600);
+  setBrightness(RED, 1);
+  setBrightness(BLUE, 1);
+  setBrightness(GREEN, 1);
 }
 
 void loop() {
