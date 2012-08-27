@@ -4,8 +4,9 @@ import random
 
 _RGB = [0, 1, 2]
 
+
 def changeLights(rgb):
-    url = 'http://192.168.1.148/' + str(int(rgb[0])) + '/' + str(int(rgb[1])) + '/' + str(int(rgb[2]))
+    url = 'http://10.0.1.122/' + str(int(rgb[0])) + '/' + str(int(rgb[1])) + '/' + str(int(rgb[2]))
     req = urllib2.Request(url, None)
     try:
         response = urllib2.urlopen(req, None, .1)
@@ -21,8 +22,6 @@ def changeLights(rgb):
 
 def printVal(rgb):
     print str(rgb[0]) + '\t' + str(rgb[1]) + '\t' + str(rgb[2])
-
-
 
 
 baseIndex = 0
@@ -84,9 +83,19 @@ while True:
                 oldsum = float(sum(thisColor))
                 for rgb in _RGB:
                     thisColor[rgb] = int(thisColor[rgb] * _CONSTANT_TRANSITION_POWER / oldsum)
-            printVal(thisColor)
+            # printVal(thisColor)
 
             changeLights(thisColor);
+
+
+    elif mode == 'pulsar':
+
+        _MAX = 255
+        _MIN = 10
+
+        for step in range(_MAX, _MIN-1, -1) + range(_MIN, _MAX+1):
+            value = abs(step)
+            changeLights([value, value, value])
 
 
     # whiteness
