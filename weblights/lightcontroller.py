@@ -26,27 +26,35 @@ def printVal(rgb):
 
 
 baseIndex = 0
-toColor = [0, 0, 1]
+toColor = [0, 0, 0]
 
 while True:
 
-    _MODES = ['schizm', 'basis', 'white']
-    mode = _MODES[1]
+    mode = 'basis'
 
     # schizm
-    if mode == _MODES[0]:
-        changeLights([255,0,0])
-        changeLights([0,255,0])
-        changeLights([0,0,255])
+    if mode == 'schizm':
+
+        _SPEED = .2
+        _ROTATE = [0,255,255]
+
+        changeLights(_ROTATE)
+        time.sleep(_SPEED)
+        changeLights([_ROTATE[1], _ROTATE[2], _ROTATE[0]])
+        time.sleep(_SPEED)
+        changeLights([_ROTATE[2], _ROTATE[0], _ROTATE[1]])
+        time.sleep(_SPEED)
 
 
     # rotate through basis
-    elif mode == _MODES[1]:
+    elif mode == 'basis':
 
         _BASE_MAX = 255
-        _BASE_RANDOMNESS = 0
+        _BASE_RANDOMNESS = 100
         # setting constant transition power to 0 will ignore that calculation altogether
         _CONSTANT_TRANSITION_POWER = 255
+
+        _TRANSITION_STEPS = 100
 
         basis = [
             [0, 0, 1],
@@ -67,11 +75,10 @@ while True:
 
         print 'From: ' + str(atColor) + '\tTo: ' + str(toColor)
 
-        steps = 200
-        for step in range(0, steps):
+        for step in range(0, _TRANSITION_STEPS):
             thisColor = [0, 0, 0]
             for rgb in _RGB:
-                thisColor[rgb] = int(atColor[rgb] + (toColor[rgb] - atColor[rgb]) * step / float(steps))
+                thisColor[rgb] = int(atColor[rgb] + (toColor[rgb] - atColor[rgb]) * step / float(_TRANSITION_STEPS))
             # constant power through transition
             if _CONSTANT_TRANSITION_POWER and sum(thisColor):
                 oldsum = float(sum(thisColor))
@@ -83,9 +90,9 @@ while True:
 
 
     # whiteness
-    elif mode == _MODES[2]:
+    elif mode == 'blinder':
 
-        _BRIGHTNESS = 1
+        _BRIGHTNESS = 255
 
         changeLights([_BRIGHTNESS, _BRIGHTNESS, _BRIGHTNESS])
 
