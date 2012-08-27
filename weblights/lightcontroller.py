@@ -51,7 +51,7 @@ while True:
         _BASE_MAX = 255
         _BASE_RANDOMNESS = 100
         # setting constant transition power to 0 will ignore that calculation altogether
-        _CONSTANT_TRANSITION_POWER = 255
+        _CONSTANT_TRANSITION_POWER = 100
 
         _TRANSITION_STEPS = 100
 
