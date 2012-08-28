@@ -1,11 +1,24 @@
 #include <SPI.h>
 #include <Ethernet.h>
 
+#define pinRED 3
+#define pinBLUE 5
+#define pinGREEN 6
+const int pinMAP[3] = {pinRED, pinBLUE, pinGREEN};
+
 // variables set by ethernet used to control internal modes
 int ic = 0;
-int ir = 0;
-int ig = 0;
-int ib = 0;
+long ir = 0;
+long ig = 0;
+long ib = 0;
+
+#define mOFF 0
+#define mRGB 1
+#define mBASIS 2
+#define mSCHIZM 3
+#define mBLINDER 4
+#define mPULSAR 5
+
 
 // ==================== start ethernet sheild ==================== //
 
@@ -60,7 +73,7 @@ boolean ethernetParseRequest() {
   char* spaceAt = strstr(&ethernetBuffer[6], " ") + 1;
 
   // setup temp variable
-  char tempString[8];
+  char tempString[255];
 
   // find all the slashes
   char* slashAt1 = strstr(&ethernetBuffer[6], "/") + 1;
@@ -72,45 +85,57 @@ boolean ethernetParseRequest() {
         char* slashAt4 = strstr(slashAt3, "/") + 1;
         if (slashAt4 < spaceAt) {
           tempString[0] = 0;
-          strncpy(tempString, slashAt3, slashAt4-slashAt3-1);
+          strncat(tempString, slashAt3, slashAt4-slashAt3-1);
         } else {
           tempString[0] = 0;
-          strncpy(tempString, slashAt3, spaceAt-slashAt3-1);
+          strncat(tempString, slashAt3, spaceAt-slashAt3-1);
         }
-        ib = atoi(tempString);
+        ib = atol(tempString);
         tempString[0] = 0;
-        strncpy(tempString, slashAt2, slashAt3-slashAt2-1);
+        strncat(tempString, slashAt2, slashAt3-slashAt2-1);
       } else {
         tempString[0] = 0;
-        strncpy(tempString, slashAt2, spaceAt-slashAt2-1);
+        strncat(tempString, slashAt2, spaceAt-slashAt2-1);
       }
-      ig = atoi(tempString);
+      ig = atol(tempString);
       tempString[0] = 0;
-      strncpy(tempString, slashAt1, slashAt2-slashAt1-1);
+      strncat(tempString, slashAt1, slashAt2-slashAt1-1);
     } else {
       tempString[0] = 0;
-      strncpy(tempString, slashAt1, spaceAt-slashAt1-1);
+      strncat(tempString, slashAt1, spaceAt-slashAt1-1);
     }
-    ir = atoi(tempString);
+    ir = atol(tempString);
     tempString[0] = 0;
-    strncpy(tempString, &ethernetBuffer[6], slashAt1-&ethernetBuffer[6]-1);
+    strncat(tempString, &ethernetBuffer[6], slashAt1-&ethernetBuffer[6]-1);
   } else {
     tempString[0] = 0;
-    strncpy(tempString, &ethernetBuffer[6], spaceAt-&ethernetBuffer[6]-1);
+    strncat(tempString, &ethernetBuffer[6], spaceAt-&ethernetBuffer[6]-1);
   }
 
   // command set for ic bit
-  if (!strncmp(tempString, "off", 6) != 0) {
-    ic = 0;
-  } else if (strncmp(tempString, "basis", 6) == 0) {
-    ic = 1;
+  if (!strncmp(tempString, "off", 3) != 0) {
+    ic = mOFF;
+  } else if (strncmp(tempString, "rgb", 3) == 0) {
+    ic = mRGB;  
+  } else if (strncmp(tempString, "basis", 5) == 0) {
+    ic = mBASIS;
   } else if (strncmp(tempString, "schizm", 6) == 0) {
-    ic = 2;
-  } else if (strncmp(tempString, "blinder", 6) == 0) {
-    ic = 3;
+    ic = mSCHIZM;
+  } else if (strncmp(tempString, "blinder", 7) == 0) {
+    ic = mBLINDER;
   } else if (strncmp(tempString, "pulsar", 6) == 0) {
-    ic = 4;
+    ic = mPULSAR;
   }
+
+  Serial.print("SETTING\t");
+  Serial.print(ic);
+  Serial.print("\t");
+  Serial.print(ir);
+  Serial.print("\t");
+  Serial.print(ig);
+  Serial.print("\t");
+  Serial.print(ib);
+  Serial.print("\n");
 
   // parsing was successful
   return 1;
@@ -144,32 +169,127 @@ void ethernetLoop() {
 // ==================== end ethernet sheild ==================== //
 
 
-
 // ==================== begin led controller ==================== //
+
+
+long atRGB[] = {0, 0, 0};
+long toRGB[] = {random(0, 255), random(0, 255), random(0, 255)};
+long stepNo = 0;
+long transNext = 0;
+
+void ledSetNextTarget() {
+
+  // (ic == mOFF)
+  // (ic == mRGB)
+  // (ic == mBLINDER)
+
+  if (ic == mBASIS) {
+
+    for(int i=0; i<=2; i++) {
+      toRGB[i] = random(0,255);
+    }
+
+  } else if (ic == mSCHIZM) {
+
+    for(int i=0; i<=2; i++) {
+      toRGB[i] = random(0,255);
+    }
+
+  } else if (ic == mBLINDER) {
+
+    for(int i=0; i<=2; i++) {
+      toRGB[i] = random(0,255);
+    }
+
+  } else if (ic == mPULSAR) {
+
+    for(int i=0; i<=2; i++) {
+      toRGB[i] = random(0,255);
+    }
+
+  }
+  
+}
+
+void ledFader(long transSteps, long transTimePerStepInMicros) {
+  
+  long currentMicros = micros();
+
+  if (currentMicros > transNext) {
+    // set next transition event
+    transNext = currentMicros + transTimePerStepInMicros;
+    // major transition event
+    stepNo += 1;
+    if (stepNo >= transSteps) {
+      // go to next step
+      for (int i = 0; i <= 2; i++) {
+        atRGB[i] = toRGB[i];
+      }
+      ledSetNextTarget();
+      stepNo = 0;
+    }
+    //Serial.print(stepNo);
+    //Serial.print("/");
+    //Serial.print(transSteps);
+    //Serial.print("\t");
+    // set lights
+    for (int i = 0; i <= 2; i++) {
+      long newval = atRGB[i] + ((toRGB[i] - atRGB[i]) * stepNo) / transSteps;
+      analogWrite(pinMAP[i], newval);
+      //Serial.print(newval);
+      //Serial.print("\t");
+    }
+    //Serial.println();
+
+  }
+}
 
 void ledcontrollerLoop() {
 
   // this function assumes that ic/ir/ig/ib have been written successfully by the ethernet
   // sheild and parses functionality out of them accordingly
   
-  analogWrite(3, ir);
-  analogWrite(5, ig);
-  analogWrite(6, ib);
+  if (ic == mOFF) {
+ 
+    analogWrite(pinRED, 0);
+    analogWrite(pinBLUE, 0);
+    analogWrite(pinGREEN, 0);
+    
+  } else if (ic == mRGB) {
 
-  Serial.print(ic);
-  Serial.print("\t");
-  Serial.print(ir);
-  Serial.print("\t");
-  Serial.print(ig);
-  Serial.print("\t");
-  Serial.print(ib);
-  Serial.print("\n");
-  
+    analogWrite(pinRED, ir);
+    analogWrite(pinBLUE, ib);
+    analogWrite(pinGREEN, ig);
+
+  } else if (ic == mBASIS) {
+ 
+    // ir is number of steps
+    // ig is number of microseconds per step
+    ledFader(ir, ig);
+
+  } else if (ic == mSCHIZM) {
+
+    analogWrite(pinRED, 0);
+    analogWrite(pinBLUE, 0);
+    analogWrite(pinGREEN, 0);
+
+  } else if (ic == mBLINDER) {
+
+    analogWrite(pinRED, ir);
+    analogWrite(pinBLUE, ir);
+    analogWrite(pinGREEN, ir);
+
+  } else if (ic == mPULSAR) {
+
+    analogWrite(pinRED, 0);
+    analogWrite(pinBLUE, 0);
+    analogWrite(pinGREEN, 0);
+
+  }
+
 }
 
 // ==================== end led controller ==================== //
-
-
 
 void setup() {
 
@@ -178,9 +298,10 @@ void setup() {
   ethernetSetup();
 
   // setup output pins on pwm
-  pinMode(3, OUTPUT);
-  pinMode(5, OUTPUT);
-  pinMode(6, OUTPUT);
+  pinMode(pinRED, OUTPUT);
+  pinMode(pinBLUE, OUTPUT);
+  pinMode(pinGREEN, OUTPUT);
+  
   // used to reset to 0 here, but prefer to not to keep last setting
 
 }

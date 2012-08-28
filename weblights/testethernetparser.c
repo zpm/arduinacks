@@ -4,7 +4,7 @@
 
 main() {
 
-  char* buffer = "POST /schizm/1-00/200/100/ HTTP/1.1";
+  char* buffer = "POST /basis/100/1000000/ HTTP/1.1";
 
   if (strncmp(buffer, "POST /", 6) != 0) {
     // if this isn't a post, return false
