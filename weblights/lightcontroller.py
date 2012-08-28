@@ -29,7 +29,7 @@ toColor = [0, 0, 0]
 
 while True:
 
-    mode = 'basis'
+    mode = 'blinder'
 
     # schizm
     if mode == 'schizm':
@@ -49,9 +49,9 @@ while True:
     elif mode == 'basis':
 
         _BASE_MAX = 255
-        _BASE_RANDOMNESS = 100
+        _BASE_RANDOMNESS = 50
         # setting constant transition power to 0 will ignore that calculation altogether
-        _CONSTANT_TRANSITION_POWER = 100
+        _CONSTANT_TRANSITION_POWER = 255 # 0 - 255
 
         _TRANSITION_STEPS = 100
 
@@ -101,7 +101,7 @@ while True:
     # whiteness
     elif mode == 'blinder':
 
-        _BRIGHTNESS = 255
+        _BRIGHTNESS = 10
 
         changeLights([_BRIGHTNESS, _BRIGHTNESS, _BRIGHTNESS])
 

@@ -1,12 +1,11 @@
 #include <SPI.h>
 #include <Ethernet.h>
 
-
-char im[15];
-char ir[15];
-char ig[15];
-char ib[15];
-
+// variables set by ethernet used to control internal modes
+int ic = 0;
+int ir = 0;
+int ig = 0;
+int ib = 0;
 
 // ==================== start ethernet sheild ==================== //
 
@@ -46,29 +45,76 @@ void ethernetWaitForRequest(EthernetClient client) {
 // tries to parse arguments out of the url. returns false if anything fails
 boolean ethernetParseRequest() {
 
-  // Received ethernetBuffer contains "POST /cmd/param1/param2 HTTP/1.1".  Break it up.
-  char* slash1;
-  char* slash2;
-  char* slash3;
-  char* space2;
-  
-  slash1 = strstr(ethernetBuffer, "/") + 1; // Look for first slash
-  slash2 = strstr(slash1, "/") + 1; // second slash
-  slash3 = strstr(slash2, "/") + 1; // third slash
-  space2 = strstr(slash3, "/") + 1; // Look for first slash
-  if (slash3 > space2) slash3=slash2;
-  
-  // strncpy does not automatically add terminating zero,
-  // but strncat does! So start with blank string and concatenate.
-  ir[0] = 0;
-  ig[0] = 0;
-  ib[0] = 0;
+  if (strncmp(ethernetBuffer, "POST /", 6) != 0) {
+    // if this isn't a post, return false
+    return 0;
+  }
 
-  strncat(ir, slash1, slash2-slash1-1);
-  strncat(ig, slash2, slash3-slash2-1);
-  strncat(ib, slash3, space2-slash3-1);
+  // set all the values to zero
+  ic = 0;
+  ir = 0;
+  ig = 0;
+  ib = 0;
 
-  return true;
+  // find terminating space
+  char* spaceAt = strstr(&ethernetBuffer[6], " ") + 1;
+
+  // setup temp variable
+  char tempString[8];
+
+  // find all the slashes
+  char* slashAt1 = strstr(&ethernetBuffer[6], "/") + 1;
+  if (slashAt1 < spaceAt) {
+    char* slashAt2 = strstr(slashAt1, "/") + 1;
+    if (slashAt2 < spaceAt) {
+      char* slashAt3 = strstr(slashAt2, "/") + 1;
+      if (slashAt3 < spaceAt) {
+        char* slashAt4 = strstr(slashAt3, "/") + 1;
+        if (slashAt4 < spaceAt) {
+          tempString[0] = 0;
+          strncpy(tempString, slashAt3, slashAt4-slashAt3-1);
+        } else {
+          tempString[0] = 0;
+          strncpy(tempString, slashAt3, spaceAt-slashAt3-1);
+        }
+        ib = atoi(tempString);
+        tempString[0] = 0;
+        strncpy(tempString, slashAt2, slashAt3-slashAt2-1);
+      } else {
+        tempString[0] = 0;
+        strncpy(tempString, slashAt2, spaceAt-slashAt2-1);
+      }
+      ig = atoi(tempString);
+      tempString[0] = 0;
+      strncpy(tempString, slashAt1, slashAt2-slashAt1-1);
+    } else {
+      tempString[0] = 0;
+      strncpy(tempString, slashAt1, spaceAt-slashAt1-1);
+    }
+    ir = atoi(tempString);
+    tempString[0] = 0;
+    strncpy(tempString, &ethernetBuffer[6], slashAt1-&ethernetBuffer[6]-1);
+  } else {
+    tempString[0] = 0;
+    strncpy(tempString, &ethernetBuffer[6], spaceAt-&ethernetBuffer[6]-1);
+  }
+
+  // command set for ic bit
+  if (!strncmp(tempString, "off", 6) != 0) {
+    ic = 0;
+  } else if (strncmp(tempString, "basis", 6) == 0) {
+    ic = 1;
+  } else if (strncmp(tempString, "schizm", 6) == 0) {
+    ic = 2;
+  } else if (strncmp(tempString, "blinder", 6) == 0) {
+    ic = 3;
+  } else if (strncmp(tempString, "pulsar", 6) == 0) {
+    ic = 4;
+  }
+
+  // parsing was successful
+  return 1;
+
 }
 
 void ethernetLoop() {
@@ -103,18 +149,21 @@ void ethernetLoop() {
 
 void ledcontrollerLoop() {
 
-  // this function assumes that im/ir/ig/ib have been written successfully by the ethernet
+  // this function assumes that ic/ir/ig/ib have been written successfully by the ethernet
   // sheild and parses functionality out of them accordingly
   
-  analogWrite(3, atoi(ir));
-  analogWrite(5, atoi(ig));
-  analogWrite(6, atoi(ib));
+  analogWrite(3, ir);
+  analogWrite(5, ig);
+  analogWrite(6, ib);
 
-  Serial.print(atoi(ir));
+  Serial.print(ic);
   Serial.print("\t");
-  Serial.print(atoi(ig));
+  Serial.print(ir);
   Serial.print("\t");
-  Serial.print(atoi(ib));
+  Serial.print(ig);
+  Serial.print("\t");
+  Serial.print(ib);
+  Serial.print("\n");
   
 }
 
