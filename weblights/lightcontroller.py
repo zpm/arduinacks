@@ -6,8 +6,8 @@ _RGB = [0, 1, 2]
 
 
 def changeLights(rgb):
-    url = 'http://10.0.1.122/' + str(int(rgb[0])) + '/' + str(int(rgb[1])) + '/' + str(int(rgb[2]))
-    req = urllib2.Request(url, None)
+    url = 'http://10.0.1.122/rgb/' + str(int(rgb[0])) + '/' + str(int(rgb[1])) + '/' + str(int(rgb[2]))
+    req = urllib2.Request(url, '')
     try:
         response = urllib2.urlopen(req, None, .1)
     except urllib2.URLError as e:
@@ -29,13 +29,13 @@ toColor = [0, 0, 0]
 
 while True:
 
-    mode = 'blinder'
+    mode = 'basis'
 
     # schizm
     if mode == 'schizm':
 
-        _SPEED = .2
-        _ROTATE = [0,255,255]
+        _SPEED = .3
+        _ROTATE = [0,random.randint(200,255),random.randint(200,255)]
 
         changeLights(_ROTATE)
         time.sleep(_SPEED)

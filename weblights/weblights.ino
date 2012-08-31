@@ -1,9 +1,11 @@
 #include <SPI.h>
 #include <Ethernet.h>
 
+// these must be PWM pins
 #define pinRED 3
 #define pinBLUE 5
 #define pinGREEN 6
+// create map so it's easy to iterate over these vals with a loop
 const int pinMAP[3] = {pinRED, pinBLUE, pinGREEN};
 
 // variables set by ethernet used to control internal modes
@@ -245,45 +247,37 @@ void ledFader(long transSteps, long transTimePerStepInMicros) {
 }
 
 void ledcontrollerLoop() {
-
+  
   // this function assumes that ic/ir/ig/ib have been written successfully by the ethernet
   // sheild and parses functionality out of them accordingly
   
+  // static functions
+  
   if (ic == mOFF) {
- 
     analogWrite(pinRED, 0);
     analogWrite(pinBLUE, 0);
     analogWrite(pinGREEN, 0);
-    
+   
   } else if (ic == mRGB) {
-
     analogWrite(pinRED, ir);
     analogWrite(pinBLUE, ib);
     analogWrite(pinGREEN, ig);
 
-  } else if (ic == mBASIS) {
- 
-    // ir is number of steps
-    // ig is number of microseconds per step
-    ledFader(ir, ig);
-
-  } else if (ic == mSCHIZM) {
-
-    analogWrite(pinRED, 0);
-    analogWrite(pinBLUE, 0);
-    analogWrite(pinGREEN, 0);
-
   } else if (ic == mBLINDER) {
-
     analogWrite(pinRED, ir);
     analogWrite(pinBLUE, ir);
     analogWrite(pinGREEN, ir);
 
-  } else if (ic == mPULSAR) {
+  // fading functions that utilize ledSetNextTarget()
+  // ir - transSteps, "smoothness" - number of steps in the transition. 0 is flash instantly
+  // ig - transTimePerStepInMicros, 1000000 = 1 sec. effective minimum ~400 us
+  // effectively, this means cycle time is ir*ig
 
-    analogWrite(pinRED, 0);
-    analogWrite(pinBLUE, 0);
-    analogWrite(pinGREEN, 0);
+  } else if (ic == mBASIS || ic == mSCHIZM || ic == mPULSAR ) {
+ 
+    // ir is number of steps
+    // ig is number of microseconds per step
+    ledFader(ir, ig);
 
   }
 
