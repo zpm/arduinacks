@@ -218,9 +218,12 @@ void ledFaderLoop() {
     long newVal[3];
     for (int i = 0; i <= 2; i++) {
       newVal[i] = ledAtRGB[i] + ((ledToRGB[i] - ledAtRGB[i]) * ledFaderStep) / ledFaderSteps;
-    } 
+      if (ledFaderStyle != STYLE_CONSTANT) {
+        newVal[i] = newVal[i] * ledVolume / ledMax;
+      }
+    }
 
-    // do constant power calculations
+    // limit to constant power
     if (ledFaderStyle == STYLE_CONSTANT) {
       long totalVal = newVal[0] + newVal[1] + newVal[2];
       if (totalVal > 0) { // avoid dividing by zero
