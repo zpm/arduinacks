@@ -9,23 +9,22 @@
 const int pinMAP[3] = {pinRED, pinBLUE, pinGREEN};
 
 // variables set by ethernet used to control internal modes
-int ic = 0;
-long ir = 0;
-long ig = 0;
-long ib = 0;
+int mode = 0;
+long red = 0;
+long green = 0;
+long blue = 0;
+long transSteps = 0;
+long transTimePerStepInMicros = 0;
 
 #define mOFF 0
 #define mRGB 1
-#define mBASIS 2
-#define mSCHIZM 3
-#define mBLINDER 4
-#define mPULSAR 5
+#define mFADE 2
 
 
 // ==================== start ethernet sheild ==================== //
 
 EthernetServer server(80);
-byte mac[] = { 0x90, 0xA2, 0xDA, 0x0D, 0x4B, 0x82 };
+byte mac[] = { 0x90, 0xA2, 0xDA, 0x0D, 0x30, 0xB7 };
 
 #define ETHERNETBUFFERMAX 128
 int ethernetBufferSize;
@@ -65,11 +64,10 @@ boolean ethernetParseRequest() {
     return 0;
   }
 
-  // set all the values to zero
-  ic = 0;
-  ir = 0;
-  ig = 0;
-  ib = 0;
+  // use these temp variables until we know which mode is specified
+  long temp1 = 0;
+  long temp2 = 0;
+  long temp3 = 0;
 
   // find terminating space
   char* spaceAt = strstr(&ethernetBuffer[6], " ") + 1;
@@ -92,21 +90,21 @@ boolean ethernetParseRequest() {
           tempString[0] = 0;
           strncat(tempString, slashAt3, spaceAt-slashAt3-1);
         }
-        ib = atol(tempString);
+        temp3 = atol(tempString);
         tempString[0] = 0;
         strncat(tempString, slashAt2, slashAt3-slashAt2-1);
       } else {
         tempString[0] = 0;
         strncat(tempString, slashAt2, spaceAt-slashAt2-1);
       }
-      ig = atol(tempString);
+      temp2 = atol(tempString);
       tempString[0] = 0;
       strncat(tempString, slashAt1, slashAt2-slashAt1-1);
     } else {
       tempString[0] = 0;
       strncat(tempString, slashAt1, spaceAt-slashAt1-1);
     }
-    ir = atol(tempString);
+    temp1 = atol(tempString);
     tempString[0] = 0;
     strncat(tempString, &ethernetBuffer[6], slashAt1-&ethernetBuffer[6]-1);
   } else {
@@ -114,29 +112,28 @@ boolean ethernetParseRequest() {
     strncat(tempString, &ethernetBuffer[6], spaceAt-&ethernetBuffer[6]-1);
   }
 
-  // command set for ic bit
+  // set all the variables now
   if (!strncmp(tempString, "off", 3) != 0) {
-    ic = mOFF;
+    mode = mOFF;
   } else if (strncmp(tempString, "rgb", 3) == 0) {
-    ic = mRGB;  
-  } else if (strncmp(tempString, "basis", 5) == 0) {
-    ic = mBASIS;
-  } else if (strncmp(tempString, "schizm", 6) == 0) {
-    ic = mSCHIZM;
-  } else if (strncmp(tempString, "blinder", 7) == 0) {
-    ic = mBLINDER;
-  } else if (strncmp(tempString, "pulsar", 6) == 0) {
-    ic = mPULSAR;
+    mode = mRGB;  
+    red = temp1;
+    green = temp2;
+    blue = temp3;
+  } else if (strncmp(tempString, "fade", 5) == 0) {
+    mode = mFADE;
+    transSteps = temp1;
+    transTimePerStepInMicros = temp2;
   }
 
   Serial.print("SETTING\t");
-  Serial.print(ic);
+  Serial.print(mode);
   Serial.print("\t");
-  Serial.print(ir);
+  Serial.print(red);
   Serial.print("\t");
-  Serial.print(ig);
+  Serial.print(green);
   Serial.print("\t");
-  Serial.print(ib);
+  Serial.print(blue);
   Serial.print("\n");
 
   // parsing was successful
@@ -179,40 +176,6 @@ long toRGB[] = {random(0, 255), random(0, 255), random(0, 255)};
 long stepNo = 0;
 long transNext = 0;
 
-void ledSetNextTarget() {
-
-  // (ic == mOFF)
-  // (ic == mRGB)
-  // (ic == mBLINDER)
-
-  if (ic == mBASIS) {
-
-    for(int i=0; i<=2; i++) {
-      toRGB[i] = random(0,255);
-    }
-
-  } else if (ic == mSCHIZM) {
-
-    for(int i=0; i<=2; i++) {
-      toRGB[i] = random(0,255);
-    }
-
-  } else if (ic == mBLINDER) {
-
-    for(int i=0; i<=2; i++) {
-      toRGB[i] = random(0,255);
-    }
-
-  } else if (ic == mPULSAR) {
-
-    for(int i=0; i<=2; i++) {
-      toRGB[i] = random(0,255);
-    }
-
-  }
-  
-}
-
 void ledFader(long transSteps, long transTimePerStepInMicros) {
   
   long currentMicros = micros();
@@ -227,7 +190,10 @@ void ledFader(long transSteps, long transTimePerStepInMicros) {
       for (int i = 0; i <= 2; i++) {
         atRGB[i] = toRGB[i];
       }
-      ledSetNextTarget();
+    
+      for(int i=0; i<=2; i++) {
+        toRGB[i] = random(0,255);
+      }
       stepNo = 0;
     }
     //Serial.print(stepNo);
@@ -248,36 +214,33 @@ void ledFader(long transSteps, long transTimePerStepInMicros) {
 
 void ledcontrollerLoop() {
   
-  // this function assumes that ic/ir/ig/ib have been written successfully by the ethernet
+  // this function assumes that the variables have been written successfully by the ethernet
   // sheild and parses functionality out of them accordingly
   
   // static functions
   
-  if (ic == mOFF) {
+  if (mode == mOFF) {
     analogWrite(pinRED, 0);
     analogWrite(pinBLUE, 0);
     analogWrite(pinGREEN, 0);
    
-  } else if (ic == mRGB) {
-    analogWrite(pinRED, ir);
-    analogWrite(pinBLUE, ib);
-    analogWrite(pinGREEN, ig);
+  } else if (mode == mRGB) {
+    analogWrite(pinRED, red);
+    analogWrite(pinBLUE, blue);
+    analogWrite(pinGREEN, green);
 
-  } else if (ic == mBLINDER) {
-    analogWrite(pinRED, ir);
-    analogWrite(pinBLUE, ir);
-    analogWrite(pinGREEN, ir);
+  }
 
   // fading functions that utilize ledSetNextTarget()
-  // ir - transSteps, "smoothness" - number of steps in the transition. 0 is flash instantly
-  // ig - transTimePerStepInMicros, 1000000 = 1 sec. effective minimum ~400 us
-  // effectively, this means cycle time is ir*ig
+  // transSteps, "smoothness" - number of steps in the transition. 0 is flash instantly
+  // transTimePerStepInMicros, 1000000 = 1 sec. effective minimum ~400 us
+  // effectively, this means cycle time is transSteps*transTimePerStepInMicros
 
-  } else if (ic == mBASIS || ic == mSCHIZM || ic == mPULSAR ) {
+  else if (mode == mFADE ) {
  
-    // ir is number of steps
-    // ig is number of microseconds per step
-    ledFader(ir, ig);
+    // transSteps is number of steps
+    // transTimePerStepInMicros is number of microseconds per step
+    ledFader(transSteps, transTimePerStepInMicros);
 
   }
 
