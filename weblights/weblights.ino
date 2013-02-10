@@ -121,21 +121,32 @@ boolean ethernetParseRequest() {
     red = temp1;
     green = temp2;
     blue = temp3;
+    
+    Serial.print("SETTING\t");
+    Serial.print(mode);
+    Serial.print("\t");
+    Serial.print(red);
+    Serial.print("\t");
+    Serial.print(green);
+    Serial.print("\t");
+    Serial.print(blue);
+    Serial.print("\n");
+    
   } else if (strncmp(tempString, "fade", 4) == 0) {
     mode = mFADE;
     steps = temp1;
     timePerStep = temp2;
+    
+    Serial.print("SETTING\t");
+    Serial.print(mode);
+    Serial.print("\t");
+    Serial.print(steps);
+    Serial.print("\t");
+    Serial.print(timePerStep);
+    Serial.print("\n");
   }
 
-  Serial.print("SETTING\t");
-  Serial.print(mode);
-  Serial.print("\t");
-  Serial.print(red);
-  Serial.print("\t");
-  Serial.print(green);
-  Serial.print("\t");
-  Serial.print(blue);
-  Serial.print("\n");
+
 
   // parsing was successful
   return 1;
@@ -209,7 +220,7 @@ int basisRandomization = 0;
 
 void ledFader(long ledFaderSteps, long transTimePerStepInMicros) {
   
-  long ledFaderDelayWhileAtTarget = transTimePerStepInMicros * 100;
+  long ledFaderDelayWhileAtTarget = transTimePerStepInMicros * 50;
   long currentMicros = micros();
   if (currentMicros > ledFaderNextEvent) {
     
@@ -352,19 +363,13 @@ void ledcontrollerLoop() {
     analogWrite(pinBLUE, blue);
     analogWrite(pinGREEN, green);
 
-  }
-
-  // fading functions that utilize ledSetNextTarget()
-  // transSteps, "smoothness" - number of steps in the transition. 0 is flash instantly
-  // transTimePerStepInMicros, 1000000 = 1 sec. effective minimum ~400 us
-  // effectively, this means cycle time is transSteps*transTimePerStepInMicros
-
-  else if (mode == mFADE ) {
- 
-    // transSteps is number of steps
+  } else if (mode == mFADE) {
+    
+    // steps, "smoothness" - number of steps in the transition. 0 is flash instantly
+    // transTimePerStepInMicros, 1000000 = 1 sec. effective minimum ~400 us
+    // effectively, this means cycle time is transSteps*transTimePerStepInMicros
     // transTimePerStepInMicros is number of microseconds per step
     ledFader(steps, timePerStep);
-
   }
 
 }
