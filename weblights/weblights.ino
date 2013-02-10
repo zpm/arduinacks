@@ -3,8 +3,8 @@
 
 // these must be PWM pins
 #define pinRED 3
-#define pinBLUE 5
-#define pinGREEN 6
+#define pinGREEN 5
+#define pinBLUE 6
 // create map so it's easy to iterate over these vals with a loop
 const int pinMAP[3] = {pinRED, pinBLUE, pinGREEN};
 
@@ -13,8 +13,9 @@ int mode = 0;
 long red = 0;
 long green = 0;
 long blue = 0;
-long transSteps = 0;
-long transTimePerStepInMicros = 0;
+long steps = 0;
+long timePerStep = 12000;
+long brightness = 255;
 
 #define mOFF 0
 #define mRGB 1
@@ -120,10 +121,10 @@ boolean ethernetParseRequest() {
     red = temp1;
     green = temp2;
     blue = temp3;
-  } else if (strncmp(tempString, "fade", 5) == 0) {
+  } else if (strncmp(tempString, "fade", 4) == 0) {
     mode = mFADE;
-    transSteps = temp1;
-    transTimePerStepInMicros = temp2;
+    steps = temp1;
+    timePerStep = temp2;
   }
 
   Serial.print("SETTING\t");
@@ -172,44 +173,166 @@ void ethernetLoop() {
 
 
 long atRGB[] = {0, 0, 0};
-long toRGB[] = {random(0, 255), random(0, 255), random(0, 255)};
-long stepNo = 0;
-long transNext = 0;
+long toRGB[] = {255, 0, 255};
+long ledFaderStep = 1;
+long ledFaderNextEvent = 0;
+boolean ledFaderPulseState = true;
 
-void ledFader(long transSteps, long transTimePerStepInMicros) {
+// ledFaderStyle determines how the lights fade:
+//   STYLE_PURE: use set values, limited to ledVolume
+//   STYLE_PULSE: use set values, limited to ledVolume, returning to (0,0,0) between each one
+//   STYLE_CONSTANT: normalize all channels to the value set by ledVolume; (1,1,0) becomes (128,128,0)
+#define STYLE_PURE 0
+#define STYLE_PULSE 1
+#define STYLE_CONSTANT 2
+int ledFaderStyle = STYLE_CONSTANT;
+
+// ledNextMode controls how the next colors are picked:
+//   NEXT_STATIC: uses ledStaticColors to set the next color the same every cycle
+//   NEXT_BASIS_ORDERED: uses basisBase, a set of colors to transition through that ensure
+//                       at least one color is always on and at least one is always off
+//   NEXT_BASIS_RANDOM: uses basisBase, but selects a phase randomly instead of cycling through
+//   NEXT_RANDOM: purely random next color, but contains a lot of white-ish values eg. (123, 113, 135)
+#define NEXT_STATIC 0
+#define NEXT_BASIS_ORDERED 1
+#define NEXT_BASIS_RANDOM 2
+#define NEXT_RANDOM 3
+int ledNextMode = NEXT_BASIS_ORDERED;
+
+// ledStaticColors controls the colors that will be set if NEXT_STATIC is selected as the mode.
+// these colors have no effect on any of the other modes
+int ledStaticColors[3] = {255, 0, 255};
+
+// ledBasisRandomization controls how random the colors will be in either of the BASIS modes.
+// a random value betwene 0 and this number is subtracted from ledMax.
+int basisRandomization = 0;
+
+void ledFader(long ledFaderSteps, long transTimePerStepInMicros) {
   
+  long ledFaderDelayWhileAtTarget = transTimePerStepInMicros * 100;
   long currentMicros = micros();
-
-  if (currentMicros > transNext) {
+  if (currentMicros > ledFaderNextEvent) {
+    
     // set next transition event
-    transNext = currentMicros + transTimePerStepInMicros;
-    // major transition event
-    stepNo += 1;
-    if (stepNo >= transSteps) {
-      // go to next step
+    ledFaderNextEvent = currentMicros + transTimePerStepInMicros;
+
+    // if done transitioning, change target
+    if (ledFaderStep == ledFaderSteps) {
+      // add delay at last step
+      ledFaderNextEvent += ledFaderDelayWhileAtTarget;
+    } else if (ledFaderStep > ledFaderSteps) {
+      // copy ledToRGB into ledAtRGB
       for (int i = 0; i <= 2; i++) {
         atRGB[i] = toRGB[i];
       }
-    
-      for(int i=0; i<=2; i++) {
-        toRGB[i] = random(0,255);
+      // pick next color
+      if ((ledFaderStyle == STYLE_PULSE) && ledFaderPulseState) {
+        for (int i = 0; i <= 2; i++) {
+          toRGB[i] = 0;
+        }
+      } else {
+        ledSetNextColor();
       }
-      stepNo = 0;
+      ledFaderPulseState = !ledFaderPulseState;
+      // reset step number
+      ledFaderStep = 1;
+      // add extra delay at target
     }
-    //Serial.print(stepNo);
-    //Serial.print("/");
-    //Serial.print(transSteps);
-    //Serial.print("\t");
+
     // set lights
+    long newVal[3];
     for (int i = 0; i <= 2; i++) {
-      long newval = atRGB[i] + ((toRGB[i] - atRGB[i]) * stepNo) / transSteps;
-      analogWrite(pinMAP[i], newval);
-      //Serial.print(newval);
-      //Serial.print("\t");
+      newVal[i] = atRGB[i] + ((toRGB[i] - atRGB[i]) * ledFaderStep) / ledFaderSteps;
+      if (ledFaderStyle != STYLE_CONSTANT) {
+        newVal[i] = newVal[i] * brightness / 255;
+      }
     }
-    //Serial.println();
+
+    // limit to constant power
+    if (ledFaderStyle == STYLE_CONSTANT) {
+      long totalVal = newVal[0] + newVal[1] + newVal[2];
+      if (totalVal > 0) { // avoid dividing by zero
+        for (int i = 0; i <= 2; i++) {
+          newVal[i] = newVal[i] * brightness / totalVal;
+        }
+      }
+    }
+
+    // write
+    analogWrite(pinRED, newVal[0]);
+    analogWrite(pinBLUE, newVal[1]);
+    analogWrite(pinGREEN, newVal[2]);
+
+    ledFaderStep += 1;
 
   }
+}
+
+// ledSetNextColor is called after ledFaderLoop runs through all of its transition steps;
+// values here always assume a 0-255 scale
+
+#define BASISPHASES 6
+int basisNextPhase = 0;
+static int basisBase[BASISPHASES][3] = {
+  { 0, 0, 1 },
+  { 0, 1, 1 },
+  { 0, 1, 0 },
+  { 1, 1, 0 },
+  { 1, 0, 0 },
+  { 1, 0, 1 }
+};
+
+void ledSetNextColor() {
+
+  if (ledNextMode == NEXT_STATIC) {
+    
+    toRGB[0] = ledStaticColors[0];
+    toRGB[1] = ledStaticColors[1];
+    toRGB[2] = ledStaticColors[2];
+
+  } else if ((ledNextMode == NEXT_BASIS_ORDERED) || (ledNextMode == NEXT_BASIS_RANDOM)) {
+
+    // basis rotates through turning channels on and off as defined in basisBase.
+    // channels that are on (==1) are multiplied by ledMax less a randomization factor.
+    // basis always guarantees at least one channel is on and at least one is off.
+    // basis rotates through in a predicatable pattern, crazybasis picks phases at random,
+    // but ensuring that no phase is picked twice in a row
+
+    // set next target based off of basisNextPhase
+    for (int i=0; i<=2; i++) {
+      int target = brightness;
+      if (basisRandomization > 0) {
+        target -= random(0, basisRandomization);
+        target = max(1, target);
+      }
+      toRGB[i] = basisBase[basisNextPhase][i] * target;
+    }
+
+    // pick basisNextPhase
+    if (ledNextMode == NEXT_BASIS_RANDOM) {
+      int newBasis = random(0, BASISPHASES);
+      // if the randomly selected one is the same as the current one,
+      // just pick the one after the current one to ensure we change
+      if (newBasis == basisNextPhase) {
+        newBasis = (basisNextPhase+1) % BASISPHASES;
+      }
+      basisNextPhase = newBasis;
+    } else {
+      basisNextPhase = (basisNextPhase+1) % BASISPHASES;
+    }
+
+  } else if (ledNextMode == NEXT_RANDOM) {
+    
+    // purerandom provides three completely random channels. because these channels are
+    // completely random, unfortunately, a lot of these colors turn out to be white
+    // because values like (120, 114, 127) can often occur. to get random pure colors,
+    // use CRAZYBASIS, which avoides white by ensuring one channel will always be off.
+    for(int i=0; i<=2; i++) {
+      toRGB[i] = random(0,255);
+    }
+
+  }
+  
 }
 
 void ledcontrollerLoop() {
@@ -240,7 +363,7 @@ void ledcontrollerLoop() {
  
     // transSteps is number of steps
     // transTimePerStepInMicros is number of microseconds per step
-    ledFader(transSteps, transTimePerStepInMicros);
+    ledFader(steps, timePerStep);
 
   }
 
