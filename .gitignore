@@ -1,3 +1,10 @@
 *.DS_Store
 a.out
 *.pyc
+*.apk
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+local.properties
