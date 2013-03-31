@@ -5,8 +5,6 @@
 #define pinRED 3
 #define pinGREEN 5
 #define pinBLUE 6
-// create map so it's easy to iterate over these vals with a loop
-const int pinMAP[3] = {pinRED, pinBLUE, pinGREEN};
 
 // variables set by ethernet used to control internal modes
 int mode = 0;
@@ -20,7 +18,6 @@ long brightness = 255;
 #define mOFF 0
 #define mRGB 1
 #define mFADE 2
-
 
 // ==================== start ethernet sheild ==================== //
 
@@ -146,11 +143,8 @@ boolean ethernetParseRequest() {
     Serial.print("\n");
   }
 
-
-
   // parsing was successful
   return 1;
-
 }
 
 void ethernetLoop() {
@@ -172,16 +166,13 @@ void ethernetLoop() {
     delay(1);
     // close the connection:
     client.stop();
-
   }
-
 }
 
 // ==================== end ethernet sheild ==================== //
 
 
 // ==================== begin led controller ==================== //
-
 
 long currentRGB[] = {255,0,0};
 long initializeFade = 0;
@@ -201,14 +192,11 @@ void ledFader(long timePerStep){
   long currentTime = micros();
   
   if(initializeFade == 0){
-  	nextFadeEvent = currentTime + timePerStep;
-  	initializeFade = 1;
+    nextFadeEvent = currentTime + timePerStep;
+    initializeFade = 1;
   }
   
-  if(currentTime > nextFadeEvent){
-  
-    nextFadeEvent = currentTime + timePerStep;
-    
+  if(currentTime > nextFadeEvent){      
     switch(fadeState){
       case 1:
         currentRGB[1]++;
@@ -250,6 +238,9 @@ void ledFader(long timePerStep){
     analogWrite(pinRED, currentRGB[0]);
     analogWrite(pinGREEN, currentRGB[1]);
     analogWrite(pinBLUE, currentRGB[2]);
+
+    //set time for next update
+    nextFadeEvent = currentTime + timePerStep;
   }
 }
 
@@ -257,8 +248,6 @@ void ledcontrollerLoop() {
   
   // this function assumes that the variables have been written successfully by the ethernet
   // sheild and parses functionality out of them accordingly
-  
-  // static functions
   
   if (mode == mOFF) {
     analogWrite(pinRED, 0);
@@ -273,9 +262,7 @@ void ledcontrollerLoop() {
   } else if (mode == mFADE) {
     ledFader(timePerStep);
   }
-
 }
-
 // ==================== end led controller ==================== //
 
 void setup() {
@@ -288,16 +275,10 @@ void setup() {
   pinMode(pinRED, OUTPUT);
   pinMode(pinBLUE, OUTPUT);
   pinMode(pinGREEN, OUTPUT);
-  
-  // used to reset to 0 here, but prefer to not to keep last setting
-
 }
 
 void loop() {
-
+  
   ethernetLoop();
   ledcontrollerLoop();
-
 }
-
-
