@@ -17,6 +17,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
+import android.widget.EditText;
 
 public class WeblightsActivity extends Activity {
     
@@ -43,7 +44,10 @@ public class WeblightsActivity extends Activity {
     	case R.id.fade:
     		//first param is time on each color (in microseconds)
     		//second param is time per step (multiply by 255 to get time to fade)
-    		params = "fade/10000000/100000";
+    		EditText timeAtColor = (EditText) findViewById(R.id.setTimeAtColor);
+    		EditText timePerStep = (EditText) findViewById(R.id.setTimePerStep);
+    		
+    		params = "fade/"+ timeAtColor.getText().toString() + "/" + timePerStep.getText().toString();
     		break;
 		case R.id.blue:
     		params = "rgb/0/0/255";
