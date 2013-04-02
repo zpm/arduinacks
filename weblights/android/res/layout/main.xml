@@ -27,7 +27,6 @@
         android:layout_width="200dp"
         android:layout_height="wrap_content"
         android:text="Blue" 
-        android:background="@color/blue"
         android:onClick="ChangeColor" />
     <Button
         android:id="@+id/red"

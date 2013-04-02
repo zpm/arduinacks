@@ -41,7 +41,9 @@ public class WeblightsActivity extends Activity {
     		params = "off";
     		break;
     	case R.id.fade:
-    		params = "fade/255/100000";
+    		//first param is time on each color (in microseconds)
+    		//second param is time per step (multiply by 255 to get time to fade)
+    		params = "fade/10000000/100000";
     		break;
 		case R.id.blue:
     		params = "rgb/0/0/255";
