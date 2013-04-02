@@ -11,7 +11,7 @@ int mode = 0;
 long red = 0;
 long green = 0;
 long blue = 0;
-long steps = 0;
+long timeAtColor = 0;
 long timePerStep = 12000;
 long brightness = 255;
 
@@ -131,13 +131,13 @@ boolean ethernetParseRequest() {
     
   } else if (strncmp(tempString, "fade", 4) == 0) {
     mode = mFADE;
-    steps = temp1;
+    timeAtColor = temp1;
     timePerStep = temp2;
     
     Serial.print("SETTING\t");
     Serial.print(mode);
     Serial.print("\t");
-    Serial.print(steps);
+    Serial.print(timeAtColor);
     Serial.print("\t");
     Serial.print(timePerStep);
     Serial.print("\n");
@@ -176,7 +176,8 @@ void ethernetLoop() {
 
 long currentRGB[] = {255,0,0};
 long initializeFade = 0;
-long nextFadeEvent = 0;
+unsigned long nextFadeEvent = 0;
+unsigned long currentTime = 0;
 long fadeState = 1;  //determines which stage of the fade we're currently in
 //start with color set to 255,0,0
 //1) increase green: 255,255,0
@@ -187,60 +188,69 @@ long fadeState = 1;  //determines which stage of the fade we're currently in
 //6) decrease blue: 255,0,0
 //go to #1
 
-void ledFader(long timePerStep){
+void ledFader(long timePerStep, long timeAtColor){
 
-  long currentTime = micros();
+  currentTime = micros();
   
   if(initializeFade == 0){
     nextFadeEvent = currentTime + timePerStep;
     initializeFade = 1;
   }
   
-  if(currentTime > nextFadeEvent){      
+  if(currentTime > nextFadeEvent){
+    //set time for next update
+    nextFadeEvent = currentTime + timePerStep;   
+    
     switch(fadeState){
       case 1:
         currentRGB[1]++;
         if(currentRGB[1] == 255){
+          //move on to the next transition
           fadeState = 2;
+          
+          //add extra time to stay on this color for a bit
+          nextFadeEvent += timeAtColor;
         }
       break;
       case 2:
         currentRGB[0]--;
-        if(currentRGB[0] == 0){
+        if(currentRGB[0] == 1){
     	fadeState = 3;
+        nextFadeEvent += timeAtColor;
         }
       break;
       case 3:
         currentRGB[2]++;
         if(currentRGB[2] == 255){
           fadeState = 4;
+          nextFadeEvent += timeAtColor;
         }
       break;
       case 4:
         currentRGB[1]--;
-        if(currentRGB[1] == 0){
+        if(currentRGB[1] == 1){
           fadeState = 5;
+          nextFadeEvent += timeAtColor;
         }
       break;
       case 5:
         currentRGB[0]++;
         if(currentRGB[0] == 255){
           fadeState = 6;
+          nextFadeEvent += timeAtColor;
         }
       break;
       case 6:
         currentRGB[2]--;
-        if(currentRGB[2] == 0){
+        if(currentRGB[2] == 1){
           fadeState = 1;
+          nextFadeEvent += timeAtColor;
         }
       break;
     }
     analogWrite(pinRED, currentRGB[0]);
     analogWrite(pinGREEN, currentRGB[1]);
     analogWrite(pinBLUE, currentRGB[2]);
-
-    //set time for next update
-    nextFadeEvent = currentTime + timePerStep;
   }
 }
 
@@ -253,14 +263,16 @@ void ledcontrollerLoop() {
     analogWrite(pinRED, 0);
     analogWrite(pinBLUE, 0);
     analogWrite(pinGREEN, 0);
+    initializeFade = 0;
    
   } else if (mode == mRGB) {
     analogWrite(pinRED, red);
     analogWrite(pinBLUE, blue);
     analogWrite(pinGREEN, green);
+    initializeFade = 0;
 
   } else if (mode == mFADE) {
-    ledFader(timePerStep);
+    ledFader(timePerStep, timeAtColor);
   }
 }
 // ==================== end led controller ==================== //
