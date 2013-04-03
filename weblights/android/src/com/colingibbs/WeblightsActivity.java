@@ -1,19 +1,14 @@
 package com.colingibbs;
 
 
-import java.io.IOException;
-
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
-import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
 
 import com.larswerkman.colorpicker.ColorPicker;
 import com.larswerkman.colorpicker.ColorPicker.OnColorChangedListener;
-import com.larswerkman.colorpicker.OpacityBar;
-import com.larswerkman.colorpicker.SVBar;
 
 import android.app.Activity;
 import android.graphics.Color;
@@ -21,10 +16,6 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.view.View.OnClickListener;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.TextView;
 
 public class WeblightsActivity extends Activity implements OnColorChangedListener {
     
@@ -34,9 +25,6 @@ public class WeblightsActivity extends Activity implements OnColorChangedListene
 	private int red;
 	private int green;
 	private int blue;
-	private TextView redtext;
-	private TextView greentext;
-	private TextView bluetext;
 	
 	/** Called when the activity is first created. */
     @Override
@@ -45,7 +33,6 @@ public class WeblightsActivity extends Activity implements OnColorChangedListene
         setContentView(R.layout.main);
         
         picker = (ColorPicker) findViewById(R.id.picker);
-
 		picker.setOnColorChangedListener(this);
 	
     }
@@ -55,12 +42,12 @@ public class WeblightsActivity extends Activity implements OnColorChangedListene
 		//gives the color when it's changed.
 	}
     
-    //this is the method that gets called when a button is pushed
+    //this method gets called when a button is pushed
     //all of the buttons are defined in main.xml
     public void ChangeColor(View v){
 		String params = "";
     	
-		//figure out which button was pushed
+		//check which button was pushed and send the request
 		switch(v.getId()){
     	case R.id.off:
     		params = "off";
@@ -120,7 +107,6 @@ class SubmitColorChange extends AsyncTask<String, Void, String> {
     }
 
     protected void onPostExecute(String response) {
-        // TODO: check this.exception 
-        // TODO: do something with the feed
+
     }
 }
