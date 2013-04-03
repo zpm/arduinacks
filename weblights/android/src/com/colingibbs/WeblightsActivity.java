@@ -16,6 +16,7 @@ import com.larswerkman.colorpicker.OpacityBar;
 import com.larswerkman.colorpicker.SVBar;
 
 import android.app.Activity;
+import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
@@ -30,10 +31,12 @@ public class WeblightsActivity extends Activity implements OnColorChangedListene
 	private static final String TAG = "Weblights";
 	private static final String baseurl = "http://192.168.0.11/";
 	private ColorPicker picker;
-	private SVBar svBar;
-	private OpacityBar opacityBar;
-	private Button button;
-	private TextView text;
+	private int red;
+	private int green;
+	private int blue;
+	private TextView redtext;
+	private TextView greentext;
+	private TextView bluetext;
 	
 	/** Called when the activity is first created. */
     @Override
@@ -42,23 +45,9 @@ public class WeblightsActivity extends Activity implements OnColorChangedListene
         setContentView(R.layout.main);
         
         picker = (ColorPicker) findViewById(R.id.picker);
-		svBar = (SVBar) findViewById(R.id.svbar);
-		opacityBar = (OpacityBar) findViewById(R.id.opacitybar);
-		button = (Button) findViewById(R.id.button1);
-		text = (TextView) findViewById(R.id.textView1);
-		
-		picker.addSVBar(svBar);
-		picker.addOpacityBar(opacityBar);
+
 		picker.setOnColorChangedListener(this);
-		
-		button.setOnClickListener(new OnClickListener() {
-			
-			@Override
-			public void onClick(View v) {
-				text.setTextColor(picker.getColor());
-				picker.setOldCenterColor(picker.getColor());
-			}
-		});
+	
     }
     
 	@Override
@@ -68,54 +57,44 @@ public class WeblightsActivity extends Activity implements OnColorChangedListene
     
     //this is the method that gets called when a button is pushed
     //all of the buttons are defined in main.xml
-//    public void ChangeColor(View v){
-//		String params = "";
-//    	
-//		//figure out which button was pushed
-//		switch(v.getId()){
-//    	case R.id.off:
-//    		params = "off";
-//    		break;
-//    	case R.id.fade:
-//    		//first param is time on each color (in microseconds)
-//    		//second param is time per step (multiply by 255 to get time to fade)
-//    		EditText timeAtColor = (EditText) findViewById(R.id.setTimeAtColor);
-//    		EditText timePerStep = (EditText) findViewById(R.id.setTimePerStep);
-//    		
-//    		params = "fade/"+ timeAtColor.getText().toString() + "/" + timePerStep.getText().toString();
-//    		break;
-//		case R.id.blue:
-//    		params = "rgb/0/0/255";
-//    		break;
-//    	case R.id.pink:
-//    		params = "rgb/255/0/255";
-//    		break;
-//    	case R.id.red:
-//    		params = "rgb/255/0/0";
-//    		break;
-//    	case R.id.green:
-//    		params = "rgb/0/255/0";
-//    		break;
-//    	case R.id.orange:
-//    		params = "rgb/255/128/0";
-//    		break;
-//    	case R.id.yellow:
-//    		params = "rgb/255/255/0";
-//    		break;
-//    	case R.id.cyan:
-//    		params = "rgb/0/255/255";
-//    		break;
-//    	case R.id.white:
-//    		params = "rgb/255/255/255";
-//    		break;
-//		}
-//		
-//    	String url = baseurl + params;
-//    	Log.i(TAG, "Submitting change: " + url);
-//    	
-//    	//need to submit this in a background thread or Android will cry
-//    	new SubmitColorChange().execute(url);
-//    }   
+    public void ChangeColor(View v){
+		String params = "";
+    	
+		//figure out which button was pushed
+		switch(v.getId()){
+    	case R.id.off:
+    		params = "off";
+    		break;
+    	case R.id.fade:
+    		//first param is time on each color (in microseconds)
+    		//second param is time per step (multiply by 255 to get time to fade)
+    		//EditText timeAtColor = (EditText) findViewById(R.id.setTimeAtColor);
+    		//EditText timePerStep = (EditText) findViewById(R.id.setTimePerStep);
+    		
+    		//params = "fade/"+ timeAtColor.getText().toString() + "/" + timePerStep.getText().toString();
+    		params = "fade/10000000/200000";
+    		break;
+    	case R.id.changecolor:
+    		picker.setOldCenterColor(picker.getColor());
+			
+			red = Color.red(picker.getColor());
+			green = Color.green(picker.getColor());
+			blue = Color.blue(picker.getColor());
+			
+			String url = baseurl + "rgb/" + red + "/" + green + "/" + blue;
+			Log.i(TAG, "Submitting change: " + url);
+	    	
+	    	//need to submit this in a background thread or Android will cry
+	    	new SubmitColorChange().execute(url);
+    		break;
+		}
+		
+    	String url = baseurl + params;
+    	Log.i(TAG, "Submitting change: " + url);
+    	
+    	//need to submit this in a background thread or Android will cry
+    	new SubmitColorChange().execute(url);
+    }   
 }
 
 //this handles submitting the http request in the background
