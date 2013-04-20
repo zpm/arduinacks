@@ -9,6 +9,7 @@ import org.apache.http.util.EntityUtils;
 
 import com.larswerkman.colorpicker.ColorPicker;
 import com.larswerkman.colorpicker.ColorPicker.OnColorChangedListener;
+import com.larswerkman.colorpicker.ValueBar;
 
 import android.app.Activity;
 import android.graphics.Color;
@@ -16,6 +17,8 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.EditText;
+import android.widget.TextView;
 
 public class WeblightsActivity extends Activity implements OnColorChangedListener {
     
@@ -24,7 +27,7 @@ public class WeblightsActivity extends Activity implements OnColorChangedListene
 	private ColorPicker picker;
 	private int red;
 	private int green;
-	private int blue;
+	private int blue;	
 	
 	/** Called when the activity is first created. */
     @Override
@@ -32,7 +35,10 @@ public class WeblightsActivity extends Activity implements OnColorChangedListene
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
         
+        ValueBar valueBar = (ValueBar) findViewById(R.id.valuebar);
+        
         picker = (ColorPicker) findViewById(R.id.picker);
+        picker.addValueBar(valueBar);
 		picker.setOnColorChangedListener(this);
 	
     }
@@ -61,6 +67,9 @@ public class WeblightsActivity extends Activity implements OnColorChangedListene
     		//params = "fade/"+ timeAtColor.getText().toString() + "/" + timePerStep.getText().toString();
     		params = "fade/10000000/200000";
     		break;
+    	case R.id.white:
+    		params = "rgb/255/255/255";
+    		break;
     	case R.id.changecolor:
     		picker.setOldCenterColor(picker.getColor());
 			
@@ -68,11 +77,7 @@ public class WeblightsActivity extends Activity implements OnColorChangedListene
 			green = Color.green(picker.getColor());
 			blue = Color.blue(picker.getColor());
 			
-			String url = baseurl + "rgb/" + red + "/" + green + "/" + blue;
-			Log.i(TAG, "Submitting change: " + url);
-	    	
-	    	//need to submit this in a background thread or Android will cry
-	    	new SubmitColorChange().execute(url);
+			params = "rgb/" + red + "/" + green + "/" + blue;
     		break;
 		}
 		
