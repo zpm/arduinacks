@@ -1,6 +1,6 @@
 // debug enables serial and spams it with debug information. serial takes a really
 // long time, so enabling debug will significantly impact fade/flash times at low settings
-#define DEBUG true
+#define DEBUG false
 
 // create map of pwm pins so it's easy to set these with a loop
 // syntax to call: pinMap[channelNumber][r=0, g=1, b=2]
@@ -35,15 +35,15 @@ int ledToRGB[] = {0, 0, 0};
 #define NEXT_BASIS_ORDERED 1
 #define NEXT_BASIS_RANDOM 2
 #define NEXT_RANDOM 3
-int ledNextMode = NEXT_BASIS_ORDERED;
+int ledNextMode = NEXT_RANDOM;
 
 // ledStaticColors controls the colors that will be set if NEXT_STATIC is selected as the mode.
 // these colors have no effect on any of the other modes
-int ledStaticColors[3] = {255, 0, 255};
+int ledStaticColors[3] = {255, 255, 255};
 
 // ledBasisRandomization controls how random the colors will be in either of the BASIS modes.
 // a random value betwene 0 and this number is subtracted from ledMax.
-int basisRandomization = 0;
+int basisRandomization = 80;
 
 // ledFaderSteps controls the smoothness of the fade. for smooth fading, this should be set to
 // ledMax (so when fading from 0-255, each value in the scale will have a step). setting larger
@@ -53,7 +53,7 @@ long ledFaderSteps = ledMax;
 
 // setting this to zero will fade as fast as the arduino can handle it, which turns out to
 // be pretty damn fast if there's no other processing going on. 1 second / 255 steps = 3921 micros
-long ledFaderTimePerStepInMicros = 4000 * 3;
+long ledFaderTimePerStepInMicros = 3921 * 3;
 
 // ledFaderDelayWhileAtTarget pauses briefly after reaching one of the target steps, which
 // makes the transition appear much smoother. this pauses briefly a the point that the colors
